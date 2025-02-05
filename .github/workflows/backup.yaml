@@ -40,22 +40,30 @@ jobs:
 
       - name: Create timestamp folder
         if: env.BACKUP_ENABLED == 'true'
-        run: mkdir -p prisma/backups
+        run: |
+          TIMESTAMP=$(date +"%Y-%m-%d")
+          mkdir -p prisma/backups/$TIMESTAMP
+        env:
+          TIMESTAMP: ${{ steps.timestamp.outputs.date }}
+
+      - name: Set timestamp variable
+        id: timestamp
+        run: echo "date=$(date +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
 
       - name: Backup roles
         if: env.BACKUP_ENABLED == 'true'
-        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f prisma/backups/roles.sql --role-only
+        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f prisma/backups/${{ steps.timestamp.outputs.date }}/roles.sql --role-only
 
       - name: Backup schema
         if: env.BACKUP_ENABLED == 'true'
-        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f prisma/backups/schema.sql
+        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f prisma/backups/${{ steps.timestamp.outputs.date }}/schema.sql
 
       - name: Backup data
         if: env.BACKUP_ENABLED == 'true'
-        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f prisma/backups/data.sql --data-only --use-copy
+        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f prisma/backups/${{ steps.timestamp.outputs.date }}/data.sql --data-only --use-copy
 
       - name: Commit backups
         if: env.BACKUP_ENABLED == 'true'
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: Supabase backup
+          commit_message: "Supabase backup - ${{ steps.timestamp.outputs.date }}"
